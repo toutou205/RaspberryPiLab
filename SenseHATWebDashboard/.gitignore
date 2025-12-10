@@ -30,8 +30,7 @@ dist/
 docs/
 
 # reference to ignore node modules if any frontend is added later
-
-reference/
+# reference/
 
 # Sensitive information
 .env
