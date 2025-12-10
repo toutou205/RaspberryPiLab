@@ -1,0 +1,21 @@
+# AI Behavior Rules for Sense HAT Project
+
+## 1. 角色定义
+你是一个嵌入式 Python 专家和全栈工程师。你擅长编写高并发的 AsyncIO 代码、Flask 应用以及处理硬件传感器数据。
+
+## 2. 编码规范 (Python)
+- **类型提示 (Type Hinting)**: 所有函数参数和返回值必须标注类型 (e.g., `def get_data() -> dict:`).
+- **文档字符串 (Docstrings)**: 使用 Google 风格文档字符串。
+- **模块化**: 禁止在 `run.py` 中编写业务逻辑。所有硬件操作在 `src/hardware`, 业务逻辑在 `src/core`.
+- **错误处理**: 硬件读取必须包裹在 `try-except` 中，避免因 I2C 错误导致程序崩溃。
+- **格式化**: 符合 PEP8 标准。
+
+## 3. 工程原则
+- **日志优先**: 任何关键操作（启动、错误、模式切换）必须打印控制台日志。
+- **配置分离**: 不要在代码中硬编码路径，使用 `pathlib` 动态获取。
+- **Mocking**: 如果没有检测到 Sense HAT 硬件，应自动回退到模拟模式 (Mock Mode)，生成随机数据以便调试。
+
+## 4. 特殊技术栈
+- Flask + Flask-SocketIO (Threading mode).
+- Sense HAT API.
+- Bootstrap 5 (前端).

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sense HAT Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card-title {
+            font-weight: bold;
+        }
+        .card-text {
+            font-size: 2.5rem;
+        }
+        .header {
+            background-color: #343a40;
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header text-center">
+        <h1>Sense HAT Real-time Monitor</h1>
+    </div>
+
+    <div class="container">
+        <!-- Control Panel -->
+        <div class="card mb-4">
+            <div class="card-header">
+                Control Panel
+            </div>
+            <div class="card-body">
+                <button id="record-button" class="btn btn-primary">Start Recording</button>
+            </div>
+        </div>
+
+        <!-- Environmental Data -->
+        <div class="card">
+            <div class="card-header">
+                环境数据 (Environmental Data)
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Altitude Card -->
+                    <div class="col-md-3">
+                        <div class="card text-center text-white bg-info mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">海拔 (Altitude)</h5>
+                                <p class="card-text"><span id="altitude-value">--</span> m</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Temperature Card (Placeholder) -->
+                    <div class="col-md-3">
+                        <div class="card text-center text-white bg-danger mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Temperature</h5>
+                                <p class="card-text"><span id="temp-value">--</span> &deg;C</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Pressure Card (Placeholder) -->
+                    <div class="col-md-3">
+                        <div class="card text-center text-white bg-success mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Pressure</h5>
+                                <p class="card-text"><span id="pressure-value">--</span> hPa</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Humidity Card (Placeholder) -->
+                    <div class="col-md-3">
+                        <div class="card text-center text-white bg-warning mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Humidity</h5>
+                                <p class="card-text"><span id="humidity-value">--</span> %</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port);
+
+            const altitudeValue = document.getElementById('altitude-value');
+            const tempValue = document.getElementById('temp-value');
+            const pressureValue = document.getElementById('pressure-value');
+            const humidityValue = document.getElementById('humidity-value');
+            const recordButton = document.getElementById('record-button');
+
+            // Listen for new data from the server
+            socket.on('new_data', function(data) {
+                // Update environment values
+                if (data.altitude !== undefined) altitudeValue.textContent = data.altitude;
+                if (data.temp !== undefined) tempValue.textContent = data.temp;
+                if (data.pressure !== undefined) pressureValue.textContent = data.pressure;
+                if (data.humidity !== undefined) humidityValue.textContent = data.humidity;
+
+                // Update recording button state
+                if (data.recording !== undefined) {
+                    if (data.recording) {
+                        recordButton.textContent = 'Stop Recording';
+                        recordButton.classList.remove('btn-primary');
+                        recordButton.classList.add('btn-danger');
+                    } else {
+                        recordButton.textContent = 'Start Recording';
+                        recordButton.classList.remove('btn-danger');
+                        recordButton.classList.add('btn-primary');
+                    }
+                }
+            });
+
+            // Handle record button click
+            recordButton.addEventListener('click', () => {
+                socket.emit('toggle_record');
+            });
+
+            // Optional: Log connection status
+            socket.on('connect', function() {
+                console.log('Connected to server.');
+            });
+
+            socket.on('disconnect', function() {
+                console.log('Disconnected from server.');
+            });
+        });
+    </script>
+
+</body>
+</html>
