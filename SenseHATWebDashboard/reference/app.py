@@ -19,7 +19,7 @@ def index():
 # --- Socket.IO 事件 ---
 @socketio.on('toggle_recording')
 def handle_toggle_recording():
-    """处理来自客户端的开始/停止数据记录请求。"""
+    """处理来自客户端的开始/停止数据记录（日志）请求。"""
     sense_controller.toggle_recording()
 
 # --- 主程序入口 ---
