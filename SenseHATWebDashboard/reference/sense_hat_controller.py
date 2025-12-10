@@ -18,16 +18,24 @@ class SenseHatController:
     SEA_LEVEL_PRESSURE = 1013.25  # hPa, 用于计算海拔
 
     def __init__(self, socketio_instance):
-        self.sense = SenseHat()
         self.socketio = socketio_instance
         self.data_recorder = DataRecorder()
+        self.is_hardware_present = False
 
         # 状态变量
         self.current_mode = 0
         self.last_mode = -1
         self.is_on = True
         
-        self.sense.clear()
+        try:
+            self.sense = SenseHat()
+            self.sense.clear()
+            self.is_hardware_present = True
+            print("Sense HAT 硬件已找到。")
+        except (OSError, IOError):
+            self.sense = None
+            print("警告: 未找到 Sense HAT 硬件。程序将以模拟模式运行。")
+            print("提示: 如果您在树莓派上运行，请检查 I2C 接口是否已启用 (sudo raspi-config)。")
 
     def start_threads(self):
         """启动所有后台线程。"""
@@ -44,19 +52,30 @@ class SenseHatController:
     def _main_loop(self):
         """主循环，负责读取数据、更新LED和通过Socket.IO发送数据。"""
         while True:
-            # 1. 读取传感器数据
-            temp = self.sense.get_temperature()
-            humidity = self.sense.get_humidity()
-            pressure = self.sense.get_pressure()
-            altitude = 44330 * (1 - (pressure / self.SEA_LEVEL_PRESSURE) ** (1 / 5.255))
+            # 1. 读取传感器数据 (如果硬件存在) 或生成模拟数据
+            if self.is_hardware_present:
+                temp = self.sense.get_temperature()
+                humidity = self.sense.get_humidity()
+                pressure = self.sense.get_pressure()
+                altitude = 44330 * (1 - (pressure / self.SEA_LEVEL_PRESSURE) ** (1 / 5.255))
 
-            orientation = self.sense.get_orientation()
-            pitch = orientation['pitch']
-            roll = orientation['roll']
-            yaw = orientation['yaw']
-            
-            if pitch > 180: pitch -= 360
-            if roll > 180: roll -= 360
+                orientation = self.sense.get_orientation()
+                pitch = orientation['pitch']
+                roll = orientation['roll']
+                yaw = orientation['yaw']
+                
+                if pitch > 180: pitch -= 360
+                if roll > 180: roll -= 360
+            else:
+                # 生成平滑变化的模拟数据
+                t = time.time()
+                temp = 25 + 5 * math.sin(t / 10)
+                humidity = 50 + 10 * math.cos(t / 5)
+                pressure = 1013 + 2 * math.sin(t / 2)
+                altitude = 44330 * (1 - (pressure / self.SEA_LEVEL_PRESSURE) ** (1 / 5.255))
+                pitch = 15 * math.sin(t)
+                roll = 20 * math.cos(t)
+                yaw = (t * 10) % 360
 
             # 2. 更新 LED
             self._draw_leds(pitch, roll, yaw)
@@ -93,6 +112,10 @@ class SenseHatController:
     def _joystick_listener(self):
         """监听摇杆事件。"""
         while True:
+            if not self.is_hardware_present:
+                time.sleep(1) # 在模拟模式下，此线程无需执行任何操作
+                continue
+
             for event in self.sense.stick.get_events():
                 if event.action in (ACTION_PRESSED, ACTION_HELD):
                     if event.direction == "left":
@@ -116,6 +139,9 @@ class SenseHatController:
 
     def _draw_leds(self, pitch, roll, yaw):
         """根据当前模式绘制LED矩阵。"""
+        if not self.is_hardware_present:
+            return # 如果没有硬件，则跳过所有绘制操作
+
         if self.current_mode != self.last_mode:
             time.sleep(0.5) # 模式切换时短暂延迟以显示模式数字
             self.last_mode = self.current_mode

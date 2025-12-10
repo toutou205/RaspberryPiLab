@@ -29,6 +29,10 @@ dist/
 # Ideas for creating more specific ignores can be added below
 docs/
 
+# reference to ignore node modules if any frontend is added later
+
+reference/
+
 # Sensitive information
 .env
 *.env.*
