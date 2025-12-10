@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sense HAT 仪表盘</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .card-header { background-color: #2c2c2c; border-bottom: 1px solid #333; font-weight: bold; color: #03dac6; }
+        .sensor-val { font-size: 2.5rem; font-weight: bold; color: #fff; }
+        .sensor-unit { font-size: 1rem; color: #888; }
+        .mode-badge { font-size: 1.2rem; padding: 10px 20px; border-radius: 20px; background-color: #bb86fc; color: #000; font-weight: bold; }
+        .led-indicator { width: 15px; height: 15px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .led-on { background-color: #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .led-off { background-color: #555; }
+        .btn-record { transition: all 0.3s ease; }
+
+        /* --- 自定义颜色区 --- */
+        .custom-led-title { color: #ffffff; }
+        .custom-section-title { color: #03dac6; border-color: #333 !important; }
+        .custom-instruction { color: #ffb74d; }
+
+        /* [新增] 动态状态文字颜色 */
+        .status-text-on { 
+            color: #00ff00; /* 运行中：亮绿色 */
+            font-weight: bold;
+        }
+        .status-text-off { 
+            color: #adb5bd; /* 已关闭：亮灰色 (比 text-muted 更亮，易读) */
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h2 class="text-center mb-4">Raspberry Pi <span style="color:#cf6679">Sense HAT</span> Dashboard</h2>
+
+        <div class="card text-center mb-4">
+            <div class="card-body">
+                <h4 class="custom-led-title">当前 LED 模式</h4>
+                
+                <div class="mt-3">
+                    <span id="sys_mode" class="mode-badge">等待数据...</span>
+                </div>
+                
+                <div class="mt-3">
+                    <span id="led_status" class="led-indicator led-off"></span>
+                    <span id="led_text">LED 关闭</span>
+                </div>
+
+                <div class="mt-3">
+                    <button id="record_button" class="btn btn-secondary btn-record">
+                        开始记录
+                    </button>
+                </div>
+                
+                <p class="mt-2 small custom-instruction">操作说明: 摇杆左右切换模式 / 中键开关 / 上下调节亮度</p>
+            </div>
+        </div>
+
+        <h5 class="custom-section-title border-bottom pb-2">环境数据 (Environment)</h5>
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">温度 (Temp)</div>
+                    <div class="card-body">
+                        <div class="sensor-val"><span id="env_temp">--</span></div>
+                        <div class="sensor-unit">°C</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">湿度 (Humidity)</div>
+                    <div class="card-body">
+                        <div class="sensor-val"><span id="env_hum">--</span></div>
+                        <div class="sensor-unit">% RH</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">气压 (Pressure)</div>
+                    <div class="card-body">
+                        <div class="sensor-val"><span id="env_pres">--</span></div>
+                        <div class="sensor-unit">hPa</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">海拔 (Altitude)</div>
+                    <div class="card-body">
+                        <div class="sensor-val"><span id="env_alt">--</span></div>
+                        <div class="sensor-unit">meters</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="custom-section-title border-bottom pb-2 mt-3">姿态数据 (IMU)</h5>
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">俯仰角 (Pitch)</div>
+                    <div class="card-body">
+                        <div class="sensor-val" style="color: #ffb74d"><span id="imu_pitch">--</span></div>
+                        <div class="sensor-unit">degrees</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">横滚角 (Roll)</div>
+                    <div class="card-body">
+                        <div class="sensor-val" style="color: #4db6ac"><span id="imu_roll">--</span></div>
+                        <div class="sensor-unit">degrees</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">航向角 (Yaw)</div>
+                    <div class="card-body">
+                        <div class="sensor-val" style="color: #64b5f6"><span id="imu_yaw">--</span></div>
+                        <div class="sensor-unit">degrees</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        // --- Socket.IO 数据更新 ---
+        socket.on('sensor_update', function(data) {
+            // 环境数据
+            document.getElementById('env_temp').innerText = data.env.temp;
+            document.getElementById('env_hum').innerText = data.env.humidity;
+            document.getElementById('env_pres').innerText = data.env.pressure;
+            document.getElementById('env_alt').innerText = data.env.altitude;
+
+            // IMU 数据
+            document.getElementById('imu_pitch').innerText = data.imu.pitch;
+            document.getElementById('imu_roll').innerText = data.imu.roll;
+            document.getElementById('imu_yaw').innerText = data.imu.yaw;
+
+            // 系统状态
+            document.getElementById('sys_mode').innerText = data.sys.mode_name;
+            
+            const ledDot = document.getElementById('led_status');
+            const ledText = document.getElementById('led_text');
+            const recordBtn = document.getElementById('record_button');
+            
+            // 更新 LED 状态显示
+            if (data.sys.is_on) {
+                ledDot.className = 'led-indicator led-on';
+                ledText.className = 'status-text-on';
+                ledText.innerText = "LED 矩阵运行中";
+            } else {
+                ledDot.className = 'led-indicator led-off';
+                ledText.className = 'status-text-off';
+                ledText.innerText = "LED 矩阵已关闭 (摇杆中键开启)";
+            }
+
+            // 更新数据记录按钮状态
+            if (data.sys.is_recording) {
+                recordBtn.className = 'btn btn-danger btn-record';
+                recordBtn.innerText = '停止记录';
+            } else {
+                recordBtn.className = 'btn btn-success btn-record';
+                recordBtn.innerText = '开始记录';
+            }
+        });
+
+        // --- 事件监听 ---
+        document.getElementById('record_button').addEventListener('click', function() {
+            // 向服务器发送切换记录状态的请求
+            socket.emit('toggle_recording');
+        });
+    </script>
+</body>
+</html>
