@@ -4,7 +4,7 @@ import time
 from threading import Thread
 from src.hardware.sense_driver import SenseHatWrapper
 from src.hardware.display import LEDDisplay
-from src.core.calculator import calculate_altitude
+from src.core.calculator import pressure_to_altitude
 from src.core.logger import DataLogger
 from src.web.routes import configure_routes
 from src.web.socket_handler import configure_socket_handlers
@@ -47,12 +47,16 @@ def data_reading_thread():
                 led_display.draw_leds(pitch, roll, yaw)
 
             # 计算海拔
-            altitude = calculate_altitude(pressure)
+            altitude = pressure_to_altitude(pressure)
             
             # 检查录制状态并记录数据
-            is_recording = logger.is_recording()
-            if is_recording:
-                logger.log_data(temp, pressure, altitude)
+            if logger.is_running:
+                log_payload = {
+                    "temperature": temp,
+                    "pressure": pressure,
+                    "altitude": altitude
+                }
+                logger.log(log_payload)
 
             # 通过SocketIO发送完整数据
             socketio.emit('new_data', {
@@ -63,7 +67,7 @@ def data_reading_thread():
                 "pitch": f"{pitch:.1f}",
                 "roll": f"{roll:.1f}",
                 "yaw": f"{yaw:.1f}",
-                "recording": is_recording
+                "recording": logger.is_running
             })
             
         except Exception as e:
