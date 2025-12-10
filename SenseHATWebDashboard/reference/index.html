@@ -16,6 +16,7 @@
         .led-indicator { width: 15px; height: 15px; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .led-on { background-color: #00ff00; box-shadow: 0 0 10px #00ff00; }
         .led-off { background-color: #555; }
+        .btn-record { transition: all 0.3s ease; }
 
         /* --- 自定义颜色区 --- */
         .custom-led-title { color: #ffffff; }
@@ -48,6 +49,12 @@
                     <span id="led_status" class="led-indicator led-off"></span>
                     <span id="led_text">LED 关闭</span>
                 </div>
+
+                <div class="mt-3">
+                    <button id="record_button" class="btn btn-secondary btn-record">
+                        开始记录
+                    </button>
+                </div>
                 
                 <p class="mt-2 small custom-instruction">操作说明: 摇杆左右切换模式 / 中键开关 / 上下调节亮度</p>
             </div>
@@ -55,7 +62,7 @@
 
         <h5 class="custom-section-title border-bottom pb-2">环境数据 (Environment)</h5>
         <div class="row text-center">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card">
                     <div class="card-header">温度 (Temp)</div>
                     <div class="card-body">
@@ -64,7 +71,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card">
                     <div class="card-header">湿度 (Humidity)</div>
                     <div class="card-body">
@@ -73,12 +80,21 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <div class="card">
                     <div class="card-header">气压 (Pressure)</div>
                     <div class="card-body">
                         <div class="sensor-val"><span id="env_pres">--</span></div>
                         <div class="sensor-unit">hPa</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">海拔 (Altitude)</div>
+                    <div class="card-body">
+                        <div class="sensor-val"><span id="env_alt">--</span></div>
+                        <div class="sensor-unit">meters</div>
                     </div>
                 </div>
             </div>
@@ -119,11 +135,13 @@
     <script>
         const socket = io();
 
+        // --- Socket.IO 数据更新 ---
         socket.on('sensor_update', function(data) {
             // 环境数据
             document.getElementById('env_temp').innerText = data.env.temp;
             document.getElementById('env_hum').innerText = data.env.humidity;
             document.getElementById('env_pres').innerText = data.env.pressure;
+            document.getElementById('env_alt').innerText = data.env.altitude;
 
             // IMU 数据
             document.getElementById('imu_pitch').innerText = data.imu.pitch;
@@ -135,17 +153,33 @@
             
             const ledDot = document.getElementById('led_status');
             const ledText = document.getElementById('led_text');
+            const recordBtn = document.getElementById('record_button');
             
-            // 修改点 2：根据 is_on 状态切换文字颜色类
+            // 更新 LED 状态显示
             if (data.sys.is_on) {
                 ledDot.className = 'led-indicator led-on';
-                ledText.className = 'status-text-on'; // 应用绿色样式
+                ledText.className = 'status-text-on';
                 ledText.innerText = "LED 矩阵运行中";
             } else {
                 ledDot.className = 'led-indicator led-off';
-                ledText.className = 'status-text-off'; // 应用灰色样式
+                ledText.className = 'status-text-off';
                 ledText.innerText = "LED 矩阵已关闭 (摇杆中键开启)";
             }
+
+            // 更新数据记录按钮状态
+            if (data.sys.is_recording) {
+                recordBtn.className = 'btn btn-danger btn-record';
+                recordBtn.innerText = '停止记录';
+            } else {
+                recordBtn.className = 'btn btn-success btn-record';
+                recordBtn.innerText = '开始记录';
+            }
+        });
+
+        // --- 事件监听 ---
+        document.getElementById('record_button').addEventListener('click', function() {
+            // 向服务器发送切换记录状态的请求
+            socket.emit('toggle_recording');
         });
     </script>
 </body>
