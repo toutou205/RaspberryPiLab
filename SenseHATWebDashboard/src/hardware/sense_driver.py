@@ -36,6 +36,7 @@ class SenseHatWrapper:
         """Initializes the SenseHatWrapper."""
         self.sense: Optional[SenseHat] = None
         self.is_mock: bool = True
+        self.last_joystick_event: Optional[Dict[str, Any]] = None
 
         if SenseHat:
             try:
@@ -162,6 +163,11 @@ class SenseHatWrapper:
             if not self.is_mock and self.sense and self.sense.stick:
                 event = self.sense.stick.wait_for_event()
                 if event.action in (ACTION_PRESSED, ACTION_HELD):
+                    self.last_joystick_event = {
+                        "direction": event.direction,
+                        "action": event.action,
+                        "timestamp": event.timestamp,
+                    }
                     callback(event.direction)
             else:
                 # In mock mode, this thread does nothing but sleep.

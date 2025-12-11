@@ -48,6 +48,11 @@ class LEDDisplay:
         if self._sense:
             self._sense.clear()
 
+    @property
+    def current_mode(self) -> int:
+        """Returns the ID of the current display mode."""
+        return self._last_mode_id
+
     def update_display(
         self,
         mode: int,
