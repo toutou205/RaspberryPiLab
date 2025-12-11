@@ -69,7 +69,17 @@ class SenseHatWrapper:
         """
         # Reason for change: Added a docstring for clarity.
         if not self.is_mock and self.sense:
-            return self.sense.get_pressure()
+            # The sensor can return 0.0 on initial reads. Retry a few times.
+            for _ in range(5):
+                pressure = self.sense.get_pressure()
+                if pressure > 0:
+                    return pressure
+                time.sleep(0.1)  # Wait a moment before retrying
+
+            # If it still fails, log a warning and return a safe default
+            print("Warning: Could not read a valid pressure value. Falling back to default.")
+            return config.DEFAULT_PRESSURE
+
         return config.DEFAULT_PRESSURE + 5.0 * math.cos(time.time() / 30.0)
 
     def get_humidity(self) -> float:
