@@ -107,6 +107,9 @@ class SensorDataThread(Thread):
             humidity = self.sense_wrapper.get_humidity()
             orientation = self.sense_wrapper.get_orientation()
             altitude = pressure_to_altitude(pressure, config.SEA_LEVEL_PRESSURE)
+            
+            # Retrieve latest joystick state
+            joystick_event = self.sense_wrapper.last_joystick_event
 
             # 2. Update LED display
             # The display logic needs the current state and sensor data
@@ -134,6 +137,10 @@ class SensorDataThread(Thread):
                     'mode_name': config.LED_MODES[self.current_mode]['name'],
                     'is_on': self.is_on,
                     'is_recording': self.logger.is_recording,
+                },
+                'joystick': {
+                    'direction': joystick_event['direction'] if joystick_event else '',
+                    'action': joystick_event['action'] if joystick_event else '',
                 },
             }
 

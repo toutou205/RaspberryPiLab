@@ -27,7 +27,8 @@ class DataLogger:
         self._csv_writer: Optional[Any] = None
         self._header: List[str] = [
             'timestamp', 'temp', 'humidity', 'pressure', 'altitude',
-            'pitch', 'roll', 'yaw'
+            'pitch', 'roll', 'yaw', 'mode_id', 'mode_name',
+            'joystick_direction', 'joystick_action'
         ]
 
     def start(self) -> None:
@@ -67,11 +68,11 @@ class DataLogger:
         self._csv_writer = None
         print(f"Logging stopped. Log file saved at: {self.log_file_path}")
 
-    def record_data(self, data_packet: Dict[str, Dict[str, float]]) -> None:
+    def record_data(self, data_packet: Dict[str, Dict[str, Any]]) -> None:
         """Writes a single data packet to the CSV file.
 
         Args:
-            data_packet (Dict[str, Dict[str, float]]): The structured sensor
+            data_packet (Dict[str, Dict[str, Any]]): The structured sensor
                 data packet containing 'env' and 'imu' dictionaries.
         """
         if not self.is_recording or not self._csv_writer:
@@ -79,6 +80,8 @@ class DataLogger:
 
         env = data_packet.get('env', {})
         imu = data_packet.get('imu', {})
+        sys = data_packet.get('sys', {})
+        joystick = data_packet.get('joystick', {})
         timestamp = datetime.now().isoformat()
 
         try:
@@ -90,7 +93,11 @@ class DataLogger:
                 env.get('altitude', ''),
                 imu.get('pitch', ''),
                 imu.get('roll', ''),
-                imu.get('yaw', '')
+                imu.get('yaw', ''),
+                sys.get('mode_id', ''),
+                sys.get('mode_name', ''),
+                joystick.get('direction', ''),
+                joystick.get('action', '')
             ])
         except (IOError, csv.Error) as e:
             print(f"Error writing to log file: {e}")
