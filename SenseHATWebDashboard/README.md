@@ -18,6 +18,7 @@
 
 ## 文件结构
 
+```text
 SenseHATWebDashboard/
 ├── .gitignore              # Git ignore configuration / Git 忽略文件配置
 ├── README.md               # Project documentation / 项目说明文档
@@ -52,6 +53,7 @@ SenseHATWebDashboard/
     ├── static/             # Static assets / 静态资源
     └── templates/          # HTML templates / HTML 模板
         └── index.html      # Main dashboard / 主仪表盘
+```
 
 ## 技术栈
 
