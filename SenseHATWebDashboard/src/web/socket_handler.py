@@ -1,28 +1,36 @@
-from flask_socketio import SocketIO
-from src.core.logger import DataLogger
+# -*- coding: utf-8 -*-
+"""Defines SocketIO event handlers for real-time web communication."""
 
-def configure_socket_handlers(socketio: SocketIO, logger: DataLogger):
-    """
-    配置SocketIO事件处理程序。
+from flask_socketio import SocketIO, emit
+
+from ...src.core.logger import DataLogger
+
+
+def configure_socket_handlers(socketio: SocketIO, logger: DataLogger) -> None:
+    """Configures handlers for SocketIO events.
+
+    This function registers handlers for events sent from the client-side,
+    such as controlling the data logger.
 
     Args:
-        socketio (SocketIO): Flask-SocketIO实例。
-        logger (DataLogger): DataLogger实例。
+        socketio: The Flask-SocketIO instance.
+        logger: The application's DataLogger instance.
     """
-    @socketio.on('toggle_record')
-    def handle_toggle_record(data):
-        """
-        处理前端发送的toggle_record事件来控制日志记录。
-        """
-        is_recording = logger.is_recording()
-        if not is_recording:
-            logger.start_recording()
-            print("Started recording.")
-        else:
-            csv_path = logger.stop_recording()
-            print(f"Stopped recording. Log saved to: {csv_path}")
 
-        # 向客户端广播新的录制状态
-        socketio.emit('new_data', {
-            "recording": logger.is_recording()
-        })
+    @socketio.on("toggle_recording")
+    def handle_toggle_recording(data: dict) -> None:
+        """Handles the 'toggle_recording' event from the client.
+
+        Starts or stops the data logger based on its current state. After
+        changing the state, it broadcasts the new recording status to all
+        connected clients.
+
+        Args:
+            data: The data payload from the client (not used).
+        """
+        if logger.is_recording:
+            logger.stop()
+        else:
+            logger.start()
+
+        emit("recording_status", {"is_recording": logger.is_recording}, broadcast=True)

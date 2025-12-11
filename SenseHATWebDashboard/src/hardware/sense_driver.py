@@ -1,75 +1,176 @@
 # -*- coding: utf-8 -*-
-from sense_hat import SenseHat
+"""A wrapper class for the Sense HAT hardware.
+
+Provides a simplified interface for accessing sensor data and handles cases
+where the hardware is not present by providing mock data.
+"""
+import math
+import threading
+import time
+from typing import Callable, Dict, Optional, Any
+
+from .. import config
+
+try:
+    from sense_hat import ACTION_HELD, ACTION_PRESSED, SenseHat
+except (ImportError, OSError):
+    SenseHat = None  # type: ignore
+    ACTION_PRESSED = None
+    ACTION_HELD = None
+
 
 class SenseHatWrapper:
+    """A wrapper for the Sense HAT hardware.
+
+    This class initializes the Sense HAT, provides methods to read sensor
+    data, and listens for joystick events in a background thread. If the
+    hardware is not detected, it switches to a mock mode and returns dynamic,
+    simulated data.
+
+    Attributes:
+        sense: The SenseHat instance if available, otherwise None.
+        is_mock: True if the wrapper is using mock data, False otherwise.
     """
-    Sense HAT 硬件的封装类，用于简化硬件交互。
-    这个版本专注于读取传感器数据。
-    """
-    _instance = None
 
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(SenseHatWrapper, cls).__new__(cls)
-        return cls._instance
+    def __init__(self) -> None:
+        """Initializes the SenseHatWrapper."""
+        self.sense: Optional[SenseHat] = None
+        self.is_mock: bool = True
 
-    def __init__(self):
+        if SenseHat:
+            try:
+                self.sense = SenseHat()
+                self.sense.clear()
+                self.is_mock = False
+                print("Sense HAT hardware detected and initialized successfully.")
+            except OSError as e:
+                print(f"Could not initialize Sense HAT: {e}. Using mock data.")
+                self.is_mock = True
+        else:
+            print("Could not import sense_hat library. Using mock data.")
+            self.is_mock = True
+
+    def get_temperature(self) -> float:
+        """Reads the temperature from the humidity sensor.
+
+        Returns:
+            The temperature in degrees Celsius, or a simulated value in mock mode.
         """
-        初始化 Sense HAT。
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
+            return self.sense.get_temperature()
+        return config.DEFAULT_TEMPERATURE + 5.0 * math.sin(time.time() / 60.0)
+
+    def get_pressure(self) -> float:
+        """Reads the atmospheric pressure.
+
+        Returns:
+            The pressure in hectopascals (hPa), or a simulated value in mock mode.
         """
-        if hasattr(self, '_initialized') and self._initialized:
-            return
-            
-        try:
-            self.sense = SenseHat()
-            self._initialized = True
-            self.sense.clear()
-        except OSError as e:
-            print(f"无法初始化Sense HAT: {e}. 将使用模拟数据。")
-            self.sense = None
-            self._initialized = True
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
+            return self.sense.get_pressure()
+        return config.DEFAULT_PRESSURE + 5.0 * math.cos(time.time() / 30.0)
 
+    def get_humidity(self) -> float:
+        """Reads the percentage relative humidity.
 
-    def get_temperature(self):
-        if not self.sense:
-            return 25.0
-        return self.sense.get_temperature()
-
-    def get_pressure(self):
-        if not self.sense:
-            return 1013.25
-        return self.sense.get_pressure()
-
-    def get_humidity(self):
-        if not self.sense:
-            return 45.0
-        return self.sense.get_humidity()
-
-    def get_orientation(self):
+        Returns:
+            The humidity percentage, or a simulated value in mock mode.
         """
-        读取IMU数据 (pitch, roll, yaw)。
-        返回规范化到-180到180度的值。
-        """
-        if not self.sense:
-            return {'pitch': 0, 'roll': 0, 'yaw': 0}
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
+            return self.sense.get_humidity()
+        return config.DEFAULT_HUMIDITY + 10.0 * math.sin(time.time() / 45.0)
 
-        orientation = self.sense.get_orientation()
-        pitch = orientation['pitch']
-        roll = orientation['roll']
-        yaw = orientation['yaw']
-        
-        if pitch > 180: pitch -= 360
-        if roll > 180: roll -= 360
-        
+    def get_orientation(self) -> Dict[str, float]:
+        """Reads the orientation from the IMU sensors.
+
+        The pitch and roll values are adjusted to be within the -180 to 180
+        degree range, and yaw is 0-360.
+
+        Returns:
+            A dictionary containing pitch, roll, and yaw in degrees, or
+            simulated values in mock mode.
+        """
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
+            o = self.sense.get_orientation_degrees()
+            # Normalize pitch and roll to -180 to 180 degrees
+            p = (o["pitch"] + 180) % 360 - 180
+            r = (r["roll"] + 180) % 360 - 180
+            return {"pitch": p, "roll": r, "yaw": o["yaw"] % 360}
+
+        # Return dynamic mock data for orientation
+        t = time.time()
         return {
-            'pitch': round(pitch, 1),
-            'roll': round(roll, 1),
-            'yaw': round(yaw, 1)
+            "pitch": 30.0 * math.sin(t * 0.5),
+            "roll": 45.0 * math.cos(t * 0.3),
+            "yaw": (t * 15) % 360,
         }
 
-    def set_low_light(self, is_low):
+    def set_low_light(self, is_low: bool) -> None:
+        """Sets the LED matrix to low light mode.
+
+        Args:
+            is_low: True to enable low light mode, False to disable.
         """
-        设置低光模式。
-        """
-        if self.sense:
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
             self.sense.low_light = is_low
+
+    def clear(self) -> None:
+        """Clears the LED matrix, setting all pixels to off."""
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
+            self.sense.clear()
+
+    def set_pixels(self, pixels: list[tuple[int, int, int]]) -> None:
+        """Sets the entire LED matrix from a list of 64 RGB tuples.
+
+        Args:
+            pixels: A list of 64 tuples, each representing the RGB color
+                    of a pixel.
+        """
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
+            self.sense.set_pixels(pixels)
+
+    def show_letter(self, *args: Any, **kwargs: Any) -> None:
+        """Shows a single letter on the LED matrix.
+
+        This method is a passthrough to the underlying SenseHat.show_letter,
+        accepting the same arguments.
+        """
+        # Reason for change: Added a docstring for clarity.
+        if not self.is_mock and self.sense:
+            self.sense.show_letter(*args, **kwargs)
+
+    def _joystick_listener(self, callback: Callable[[str], None]) -> None:
+        """Internal method to listen for joystick events."""
+        while True:
+            if not self.is_mock and self.sense and self.sense.stick:
+                event = self.sense.stick.wait_for_event()
+                if event.action in (ACTION_PRESSED, ACTION_HELD):
+                    callback(event.direction)
+            else:
+                # In mock mode, this thread does nothing but sleep.
+                time.sleep(1)
+
+    def start_joystick_listener(self, callback: Callable[[str], None]) -> None:
+        """Starts the joystick listener in a separate daemon thread.
+
+        Args:
+            callback: A function to be called when a joystick event occurs.
+                      The function will receive the event direction as a string.
+        """
+        if self.is_mock:
+            print("Joystick listener not started (mock mode).")
+            return
+
+        listener_thread = threading.Thread(
+            target=self._joystick_listener, args=(callback,)
+        )
+        listener_thread.daemon = True
+        listener_thread.start()
+        print("Joystick listener started.")

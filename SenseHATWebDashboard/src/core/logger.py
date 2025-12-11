@@ -1,73 +1,97 @@
+# -*- coding: utf-8 -*-
+"""Handles data logging to CSV files."""
+
+import csv
 import os
 from datetime import datetime
+from typing import IO, Any, Dict, List, Optional
+
 
 class DataLogger:
-    def __init__(self, log_dir="logs"):
-        """
-        Initializes the DataLogger.
-        :param log_dir: The directory where log files will be stored.
-        """
-        self.log_dir = log_dir
-        self.log_file_path = None
-        self.log_file = None
-        self.is_running = False
+    """A class to handle logging of sensor data to timestamped CSV files.
 
-    def start(self):
+    This implementation uses the standard `csv` module for robust CSV writing.
+    """
+
+    def __init__(self, log_dir: str = "logs") -> None:
+        """Initializes the DataLogger.
+
+        Args:
+            log_dir (str): The directory where log files will be stored.
+                           It will be created if it doesn't exist.
         """
-        Starts the logging session. Creates a new log file with a timestamped name.
+        self.log_dir: str = log_dir
+        self.is_recording: bool = False
+        self.log_file_path: Optional[str] = None
+        self._file: Optional[IO[str]] = None
+        self._csv_writer: Optional[Any] = None
+        self._header: List[str] = [
+            'timestamp', 'temp', 'humidity', 'pressure', 'altitude',
+            'pitch', 'roll', 'yaw'
+        ]
+
+    def start(self) -> None:
+        """Starts a new logging session.
+
+        Creates the log directory if it doesn't exist, and opens a new
+        timestamped CSV file, writing the header immediately.
         """
-        if self.is_running:
-            print("Logger is already running.")
+        if self.is_recording:
+            print("Logger is already recording.")
             return
 
-        # Create log directory if it doesn't exist
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
-
-        # Create a new log file
+        os.makedirs(self.log_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_file_path = os.path.join(self.log_dir, f"log_{timestamp}.csv")
-        
+        self.log_file_path = os.path.join(self.log_dir, f"sensordata_{timestamp}.csv")
+
         try:
-            self.log_file = open(self.log_file_path, "w", newline='')
-            self.is_running = True
+            self._file = open(self.log_file_path, 'w', newline='', encoding='utf-8')
+            self._csv_writer = csv.writer(self._file)
+            self._csv_writer.writerow(self._header)
+            self.is_recording = True
             print(f"Logging started. Data will be saved to {self.log_file_path}")
         except IOError as e:
             print(f"Error opening log file: {e}")
+            self.stop()
 
-    def stop(self):
-        """
-        Stops the logging session and closes the log file.
-        """
-        if not self.is_running:
-            print("Logger is not running.")
+    def stop(self) -> None:
+        """Stops the current logging session and closes the file."""
+        if not self.is_recording and self._file is None:
             return
 
-        if self.log_file:
-            self.log_file.close()
-            self.log_file = None
-        
-        self.is_running = False
-        print("Logging stopped.")
+        if self._file:
+            self._file.close()
 
-    def log(self, data):
+        self.is_recording = False
+        self._file = None
+        self._csv_writer = None
+        print(f"Logging stopped. Log file saved at: {self.log_file_path}")
+
+    def record_data(self, data_packet: Dict[str, Dict[str, float]]) -> None:
+        """Writes a single data packet to the CSV file.
+
+        Args:
+            data_packet (Dict[str, Dict[str, float]]): The structured sensor
+                data packet containing 'env' and 'imu' dictionaries.
         """
-        Logs the given data to the log file.
-        :param data: The data to be logged (e.g., a dictionary or a string).
-        """
-        if not self.is_running or not self.log_file:
-            # Silently ignore if logger is not running
+        if not self.is_recording or not self._csv_writer:
             return
 
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-        
-        if isinstance(data, dict):
-            if self.log_file.tell() == 0:
-                # Write header for dictionaries
-                header = "timestamp," + ",".join(data.keys()) + "\n"
-                self.log_file.write(header)
-            
-            row = f"{timestamp}," + ",".join(map(str, data.values())) + "\n"
-            self.log_file.write(row)
-        else:
-            self.log_file.write(f"{timestamp},{data}\n")
+        env = data_packet.get('env', {})
+        imu = data_packet.get('imu', {})
+        timestamp = datetime.now().isoformat()
+
+        try:
+            self._csv_writer.writerow([
+                timestamp,
+                env.get('temp', ''),
+                env.get('humidity', ''),
+                env.get('pressure', ''),
+                env.get('altitude', ''),
+                imu.get('pitch', ''),
+                imu.get('roll', ''),
+                imu.get('yaw', '')
+            ])
+        except (IOError, csv.Error) as e:
+            print(f"Error writing to log file: {e}")
+            self.stop()

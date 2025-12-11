@@ -1,96 +1,93 @@
+# -*- coding: utf-8 -*-
+"""Main entry point for the Sense HAT Web Dashboard application.
+
+This script initializes all components, wires them together, and starts the
+Flask-SocketIO web server and the background sensor-reading thread.
+"""
+
+from typing import Optional
+
 from flask import Flask
 from flask_socketio import SocketIO
-import time
-from threading import Thread
-from src.hardware.sense_driver import SenseHatWrapper
-from src.hardware.display import LEDDisplay
-from src.core.calculator import pressure_to_altitude
+
+from src import config
+from src.core.background_thread import SensorDataThread
 from src.core.logger import DataLogger
+from src.hardware.display import LEDDisplay
+from src.hardware.sense_driver import SenseHatWrapper
 from src.web.routes import configure_routes
 from src.web.socket_handler import configure_socket_handlers
 
-# 初始化Flask App和SocketIO
-app = Flask(__name__, template_folder='web_client/templates', static_folder='web_client/static')
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
-
-# 初始化硬件、日志记录器和LED显示
-sense_wrapper = SenseHatWrapper()
-logger = DataLogger()
-# 确保display模块在有sense对象时才初始化
-led_display = LEDDisplay(sense_wrapper.sense) if sense_wrapper.sense else None
+background_thread: Optional[SensorDataThread] = None
 
 
-# 全局变量来控制后台线程
-thread = None
-thread_stop_event = True
+def create_app() -> tuple[SocketIO, Flask]:
+    """Creates and configures the Flask application and its extensions.
 
-def data_reading_thread():
+    This factory function handles:
+    1. Flask app initialization.
+    2. SocketIO initialization.
+    3. Hardware and logger setup.
+    4. Configuration of web routes and socket handlers.
+    5. Creation of the background thread instance.
+
+    Returns:
+        A tuple containing the configured SocketIO and Flask app instances.
     """
-    后台线程，用于读取传感器数据，计算，更新LED并发送。
-    """
-    global logger, led_display, sense_wrapper
-    while not thread_stop_event:
-        try:
-            # 读取所有传感器数据
-            temp = sense_wrapper.get_temperature()
-            pressure = sense_wrapper.get_pressure()
-            humidity = sense_wrapper.get_humidity()
-            orientation = sense_wrapper.get_orientation()
-            
-            pitch = orientation['pitch']
-            roll = orientation['roll']
-            yaw = orientation['yaw']
+    global background_thread
 
-            # 更新LED显示
-            if led_display:
-                led_display.draw_leds(pitch, roll, yaw)
+    print("Initializing application components...")
+    app = Flask(
+        __name__,
+        template_folder="../web_client/templates",
+        static_folder="../web_client/static",
+    )
+    app.config["SECRET_KEY"] = config.SECRET_KEY
+    socketio = SocketIO(app)
 
-            # 计算海拔
-            altitude = pressure_to_altitude(pressure)
-            
-            # 检查录制状态并记录数据
-            if logger.is_running:
-                log_payload = {
-                    "temperature": temp,
-                    "pressure": pressure,
-                    "altitude": altitude
-                }
-                logger.log(log_payload)
+    sense_wrapper = SenseHatWrapper()
+    logger = DataLogger(log_dir=config.LOG_DIRECTORY)
+    led_display = LEDDisplay(sense_wrapper.sense)
 
-            # 通过SocketIO发送完整数据
-            socketio.emit('new_data', {
-                "temp": f"{temp:.1f}",
-                "pressure": f"{pressure:.2f}",
-                "humidity": f"{humidity:.1f}",
-                "altitude": f"{altitude:.2f}",
-                "pitch": f"{pitch:.1f}",
-                "roll": f"{roll:.1f}",
-                "yaw": f"{yaw:.1f}",
-                "recording": logger.is_running
-            })
-            
-        except Exception as e:
-            print(f"Error in background thread: {e}")
-            
-        time.sleep(0.1) # 增加更新频率以获得更流畅的LED效果
-
-def run_app():
-    global thread, thread_stop_event
-    
-    # 配置Flask路由和SocketIO事件处理
     configure_routes(app)
     configure_socket_handlers(socketio, logger)
 
-    # 启动后台线程
-    if thread is None or not thread.is_alive():
-        thread_stop_event = False
-        thread = Thread(target=data_reading_thread)
-        thread.daemon = True
-        thread.start()
+    background_thread = SensorDataThread(socketio, sense_wrapper, led_display, logger)
 
-    # 运行Flask应用
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+    print("Application initialization complete.")
+    return socketio, app
 
-if __name__ == '__main__':
-    run_app()
+
+def main() -> None:
+    """Main function to run the application.
+
+    It creates the app using the factory, starts the background thread,
+    and runs the web server.
+    """
+    socketio, app = create_app()
+
+    print("Starting background thread...")
+    if background_thread:
+        background_thread.start()
+
+    print(f"Starting web server on {config.SERVER_HOST}:{config.SERVER_PORT}")
+    try:
+        socketio.run(
+            app,
+            host=config.SERVER_HOST,
+            port=config.SERVER_PORT,
+            debug=config.DEBUG_MODE,
+            use_reloader=False,
+        )
+    except KeyboardInterrupt:
+        print("Shutdown signal received.")
+    finally:
+        if background_thread:
+            print("Stopping background thread...")
+            background_thread.stop()
+            background_thread.join()
+        print("Application shut down.")
+
+
+if __name__ == "__main__":
+    main()

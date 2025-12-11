@@ -1,13 +1,24 @@
-from flask import render_template
+# -*- coding: utf-8 -*-
+"""Defines the web routes for the Flask application."""
 
-def configure_routes(app):
-    """
-    配置Flask的路由。
+from flask import Flask, render_template
+
+
+def configure_routes(app: Flask) -> None:
+    """Configures the application's web routes.
+
+    This function registers the handlers for different URL endpoints. For this
+    application, it only serves the main dashboard page.
 
     Args:
-        app (Flask): Flask应用实例。
+        app: The Flask application instance.
     """
-    @app.route('/')
-    def index():
-        """渲染主页面"""
-        return render_template('index.html')
+
+    @app.route("/")
+    def index() -> str:
+        """Renders the main dashboard page.
+
+        Returns:
+            The rendered 'index.html' template.
+        """
+        return render_template("index.html")
