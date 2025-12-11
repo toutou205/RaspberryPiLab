@@ -18,41 +18,40 @@
 
 ## 文件结构
 
-```
 SenseHATWebDashboard/
-├── .cursorrules            # AI 编码规则
-├── .gitignore              # Git 忽略文件配置
-├── README.md               # 项目说明文档
-├── requirements.txt        # Python 依赖库列表
-├── run.py                  # 应用主入口 (初始化并运行 Flask)
+├── .gitignore              # Git ignore configuration / Git 忽略文件配置
+├── README.md               # Project documentation / 项目说明文档
+├── requirements.txt        # Python dependencies / Python 依赖库列表
+├── rules.md                # AI coding rules / AI 编码规则
+├── run.py                  # Main application entry point / 应用主入口
 │
-├─docs/                     # 项目文档 (PRD, 技术规格等)
-│  ├── PRD.md
-│  └── TECH_SPEC.md
+├── docs/                   # Project documentation / 项目文档
+│   ├── PRD.md
+│   ├── TECH_SPEC.md
+│   └── TODO.md             # Project TODO list / 项目待办事项
 │
-├─logs/                     # 存放 CSV 数据记录文件 (运行时生成)
+├── logs/                   # Data log files / 数据记录文件
 │
-├─reference/                # 原始参考代码 (已重构)
-│  └── templates/
+├── reference/              # Reference code / 参考代码
 │
-├─src/                      # 核心源代码
-│  ├── config.py            # 配置文件
-│  ├─core/
-│  │  ├── calculator.py     # 业务逻辑计算 (如海拔)
-│  │  └── logger.py         # 数据记录核心模块
-│  ├─hardware/
-│  │  ├── sense_driver.py   # Sense HAT 硬件驱动封装
-│  │  └── display.py        # LED 矩阵显示逻辑
-│  └─web/
-│     ├── routes.py         # Flask 路由定义
-│     └── socket_handler.py # Socket.IO 事件处理
+├── src/                    # Core source code / 核心源代码
+│   ├── config.py           # Configuration / 配置文件
+│   ├── core/               # Core logic / 核心逻辑
+│   │   ├── background_thread.py # Sensor thread / 传感器线程
+│   │   ├── calculator.py   # Calculations / 计算逻辑
+│   │   └── logger.py       # Data logging / 数据记录
+│   ├── hardware/           # Hardware drivers / 硬件驱动
+│   │   ├── display.py      # LED display / LED 显示
+│   │   └── sense_driver.py # Sense HAT driver / 驱动封装
+│   └── web/                # Web server logic / Web 服务逻辑
+│       ├── __init__.py
+│       ├── routes.py       # Routes / 路由
+│       └── socket_handler.py # SocketIO handlers / SocketIO 处理
 │
-└─web_client/               # Flask 前端文件
-    ├─static/
-    │  └─css/               # 自定义样式表
-    └─templates/
-        └── index.html      # 主页面模板
-```
+└── web_client/             # Frontend files / 前端文件
+    ├── static/             # Static assets / 静态资源
+    └── templates/          # HTML templates / HTML 模板
+        └── index.html      # Main dashboard / 主仪表盘
 
 ## 技术栈
 
@@ -83,11 +82,36 @@ SenseHATWebDashboard/
    ```
 
 3. **运行应用**:
-   确保您在项目根目录下，然后运行 `app.py`。
+   确保您在项目根目录下，然后运行 `run.py`。
    ```bash
-   python3 app.py
+   python3 run.py
    ```
 
 4. **访问仪表盘**:
    在同一局域网下的任何设备上，打开浏览器并访问 `http://<你的树莓派IP地址>:5000` 即可看到实时数据。
    您可以在树莓派终端中使用 `hostname -I` 命令来查找其 IP 地址。
+
+## 注意事项 (Notes)
+
+### 虚拟环境与依赖 (Virtual Environment & Dependencies)
+
+The `sense-hat` library relies on underlying system libraries (RTIMULib, etc.), and direct installation via pip in a clean virtual environment may fail. It's recommended to use the `--system-site-packages` argument when creating the virtual environment to reuse the Raspberry Pi's pre-installed libraries.
+
+**Recommended setup steps / 推荐的设置步骤**:
+
+```bash
+# 1. Create a virtual environment with access to system packages / 创建带系统包权限的虚拟环境
+python3 -m venv --system-site-packages venv
+
+# 2. 激活环境
+source venv/bin/activate
+
+# 3. 安装其他 Python 依赖 (Flask 等)
+pip install -r requirements.txt
+```
+
+如果是在非树莓派环境（如 Windows/Mac）开发，程序会自动检测并进入**模拟模式 (Mock Mode)**，生成模拟数据以供测试。
+
+---
+
+**Developer**: Alex
