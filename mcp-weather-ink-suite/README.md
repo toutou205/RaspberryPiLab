@@ -119,7 +119,7 @@ sequenceDiagram
 *   **AQICN**: 全球空气质量数据源。
 
 ### Hardware & IoT (硬件与物联网)
-*   **Raspberry Pi Zero 2W**: 低功耗渲染终端。
+*   **Raspberry Pi 3B**: 核心渲染终端 (兼容 Zero 2W / 3B+ / 4B 等支持 SPI 的树莓派)。
 *   **Waveshare E-ink Driver**: 墨水屏底层驱动。
 *   **SSH / SCP**: 跨设备安全通信与文件传输。
 *   **Pillow (PIL)**: 像素级图像处理与位图生成。
@@ -127,20 +127,30 @@ sequenceDiagram
 ---
 
 ## 📂 目录结构 (Directory)
-```text
 mcp-weather-ink-suite/
 ├── server-pc/       # [大脑] 核心服务 (运行在 Windows/Mac)
-│   ├── .env.example # 配置文件模板
-│   ├── main.py      # MCP 入口与 SSH 控制逻辑
-│   ├── services/    # 聚合、处理、AI 顾问服务
-│   └── clients/     # API 客户端 (含 Gemini 纠错)
+│   ├── .env.example # 配置文件模板 (需重命名为 .env 并填写 API Key)
+│   ├── main.py      # MCP 入口：初始化 FastMCP，定义 Tools，处理 SSH 指令
+│   ├── config.py    # 配置管理：加载环境变量，定义路径与常量
+│   ├── services/    # 业务逻辑层
+│   │   ├── aggregator.py  # 数据聚合：并发请求 OpenMeteo 与 AQICN
+│   │   ├── processor.py   # 数据处理：清洗数据，映射天气代码
+│   │   └── advisor.py     # AI 顾问：调用 Gemini 生成天气建议
+│   ├── clients/     # API 客户端
+│   │   ├── open_meteo.py  # OpenMeteo API 封装
+│   │   └── aqicn.py       # AQICN API 封装
+│   └── utils/       # 工具函数 (日期处理、校验等)
 │
 └── client-pi/       # [手脚] 渲染服务 (运行在 Raspberry Pi)
-    ├── run_renderer.sh  # 启动脚本
+    ├── run_renderer.sh  # 启动脚本：接收标准输入并通过管道传递给 Python
     └── src/
-        ├── main.py      # 接收标准输入并在屏幕绘图
-        └── epd2in7b.py  # 屏幕驱动
-```
+        ├── main.py      # 入口程序：解析 JSON，调用绘图逻辑
+        ├── epd2in7b.py  # 驱动程序：Waveshare 2.7inch E-Paper (B) 驱动
+        ├── config.py    # 客户端配置：定义字体路径、屏幕分辨率
+        ├── services/    # 渲染服务
+        │   ├── drawing.py   # 绘图逻辑：由 JSON 数据生成位图 (PIL)
+        │   └── hardware.py  # 硬件控制：初始化 SPI，执行刷屏
+        └── resources/   # 静态资源 (字体、图标、表情包)
 
 ---
 
@@ -156,7 +166,28 @@ mcp-weather-ink-suite/
 ### 2. 树莓派准备 (Client)
 1.  **传输**: 将 `client-pi` 文件夹完整上传至树莓派用户主目录。
 2.  **依赖**: `pip install -r requirements.txt`。
-3.  **连接**: 确保 PC 可以通过 `ssh user@ip` 免密连接树莓派（使用 `ssh-copy-id`）。
+### 3. 连接与 MCP 配置
+确保 PC 可以免密连接树莓派：
+```bash
+ssh-copy-id user@pi_ip
+```
+
+在 Claude Desktop 或 Cursor 中配置 `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "weather-ink": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "D:/path/to/mcp-weather-ink-suite/server-pc",
+        "run",
+        "main.py"
+      ]
+    }
+  }
+}
+```
 
 ---
 
@@ -285,7 +316,7 @@ The screen automatically changes color schemes based on **AQI Levels** to provid
 *   **AQICN**: Air Quality Index data source.
 
 ### Hardware & IoT
-*   **Raspberry Pi Zero 2W**: Low-power rendering terminal.
+*   **Raspberry Pi 3B**: Rendering terminal (Compatible with Zero 2W / 3B+ / 4B).
 *   **Waveshare E-ink Driver**: Hardware driver.
 *   **SSH / SCP**: Secure cross-device communication.
 *   **Pillow (PIL)**: Pixel-perfect bitmap generation.
@@ -308,7 +339,26 @@ The screen automatically changes color schemes based on **AQI Levels** to provid
 ### 2. Client Setup (Pi)
 1.  **Transfer**: Upload `client-pi` folder to Pi's home directory.
 2.  **Deps**: `pip install -r requirements.txt`.
-3.  **Connect**: Ensure passwordless SSH (`ssh-copy-id`) from PC to Pi.
+3.  **Connection**: Ensure passwordless SSH access:
+    ```bash
+    ssh-copy-id user@pi_ip
+    ```
+4.  **MCP Config**: Add to `claude_desktop_config.json`:
+    ```json
+    {
+      "mcpServers": {
+        "weather-ink": {
+          "command": "uv",
+          "args": [
+            "--directory",
+            "/path/to/mcp-weather-ink-suite/server-pc",
+            "run",
+            "main.py"
+          ]
+        }
+      }
+    }
+    ```
 
 ---
 
