@@ -54,7 +54,7 @@ sequenceDiagram
     participant P as 🍓 Raspberry Pi (手脚)
 
     U->>S: "更新一下上海的天气"
-    rect rgb(230, 240, 255)
+    rect rgb(60, 70, 80)
         Note over S: 1. 数据聚合
         S->>C: 并发请求 OpenMeteo + AQICN
         C-->>S: 返回 JSON 数据
@@ -62,7 +62,7 @@ sequenceDiagram
         C-->>S: "今天空气不错，适合晨练..."
     end
     
-    rect rgb(230, 255, 230)
+    rect rgb(65, 80, 70)
         Note over S, P: 2. 远程渲染
         S->>S: 组装 MCP Payload
         S->>P: SSH 隧道传输 (Payload)
@@ -127,6 +127,7 @@ sequenceDiagram
 ---
 
 ## 📂 目录结构 (Directory)
+```text
 mcp-weather-ink-suite/
 ├── server-pc/       # [大脑] 核心服务 (运行在 Windows/Mac)
 │   ├── .env.example # 配置文件模板 (需重命名为 .env 并填写 API Key)
@@ -151,6 +152,7 @@ mcp-weather-ink-suite/
         │   ├── drawing.py   # 绘图逻辑：由 JSON 数据生成位图 (PIL)
         │   └── hardware.py  # 硬件控制：初始化 SPI，执行刷屏
         └── resources/   # 静态资源 (字体、图标、表情包)
+```
 
 ---
 
@@ -251,7 +253,7 @@ sequenceDiagram
     participant P as 🍓 Raspberry Pi (Limbs)
 
     U->>S: "Update weather for Shanghai"
-    rect rgb(230, 240, 255)
+    rect rgb(60, 70, 80)
         Note over S: 1. Aggregation
         S->>C: Parallel Fetch OpenMeteo + AQICN
         C-->>S: JSON Data
@@ -259,7 +261,7 @@ sequenceDiagram
         C-->>S: "Great air quality, perfect for a jog..."
     end
     
-    rect rgb(230, 255, 230)
+    rect rgb(65, 80, 70)
         Note over S, P: 2. Remote Rendering
         S->>S: Assemble MCP Payload
         S->>P: SSH Tunnel Transfer (Payload)
