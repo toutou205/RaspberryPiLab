@@ -21,4 +21,11 @@ Below is a list of projects we are currently working on or have completed:
 
   ![Image](https://github.com/user-attachments/assets/c0f1b46d-fe87-4998-92de-02d72137f999)
 
+### 🌈 **[@mcp-weather-ink-suite](./mcp-weather-ink-suite/)**
+
+- 🇨🇳 **中文**: 一个由 AI Agent 驱动的智能墨水屏气象站。通过 MCP 协议连接 PC "大脑" 与树莓派 "手脚"，实时显示全球天气、AQI 及 Gemini 生成的智能建议。
+- 🇺🇸 **English**: An AI Agent-powered E-ink weather station. Connects PC "Brain" and Pi "Limbs" via MCP protocol to display real-time global weather, AQI, and Gemini-generated smart advice.
+
+  ![Preview](mcp-weather-ink-suite/debug_rgb_image.png)
+
 ---
