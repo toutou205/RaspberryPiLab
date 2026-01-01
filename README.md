@@ -28,4 +28,8 @@ Below is a list of projects we are currently working on or have completed:
 
   ![Preview](mcp-weather-ink-suite/debug_rgb_image.png)
 
+  Lahore
+  ![Image](https://github.com/user-attachments/assets/4a883335-c2f6-49d2-9b31-d6c51c1aff2f)
+
+
 ---
