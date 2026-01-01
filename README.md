@@ -31,5 +31,11 @@ Below is a list of projects we are currently working on or have completed:
   Lahore
   ![Image](https://github.com/user-attachments/assets/4a883335-c2f6-49d2-9b31-d6c51c1aff2f)
 
+  Dali
+  ![Image](https://github.com/user-attachments/assets/303ac890-d96f-43be-8d0c-3cf3a86c7a4e)
+
+  New Delhi
+  ![Image](https://github.com/user-attachments/assets/53e45205-9deb-4bc3-abdd-c3e1aa49b8dc)
+
 
 ---
