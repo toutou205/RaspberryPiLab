@@ -1,143 +1,146 @@
-# 🍓 Sense HAT Web Dashboard / Sense HAT 网页仪表盘
+# Sense HAT Web Dashboard
 
-## 📖 Description / 项目描述
+This project provides a web-based dashboard to monitor and interact with a Raspberry Pi Sense HAT in real-time. It streams sensor data to a web interface and allows for controlling the Sense HAT's LED matrix and data logging through a web browser.
 
-**English**:  
-This project is a real-time environment and attitude monitoring system based on Raspberry Pi and Sense HAT. It displays sensor data from the Sense HAT via a web dashboard, including temperature, humidity, pressure, attitude angles, and calculated altitude. Users can view data in real-time via a web page and control whether to log this data to a local CSV file. It also supports switching LED matrix display modes via the physical joystick.
+## Features
 
-**中文**:  
-该项目是一个基于 Raspberry Pi 和 Sense HAT 的实时环境与姿态监控系统。它通过一个 Web 仪表盘展示来自 Sense HAT 的传感器数据，包括温度、湿度、气压、姿态角以及计算出的海拔高度。用户可以通过网页实时查看数据，并控制是否将这些数据记录到本地 CSV 文件中。同时，它也支持通过物理摇杆切换 LED 矩阵的显示模式。
+*   **Real-time Sensor Monitoring**: View temperature, humidity, pressure, altitude, and IMU (pitch, roll, yaw) data updated in real-time.
+*   **Interactive LED Control**: Change the LED matrix display mode and toggle it on/off using the Sense HAT's joystick.
+*   **Web-based Controls**: Start and stop data logging directly from the web interface.
+*   **Data Logging**: Record sensor data to a CSV file for later analysis.
+*   **Modular Architecture**: The code is organized into distinct modules for hardware interaction, web interface, and core logic.
 
-  ![Image](https://github.com/user-attachments/assets/c0f1b46d-fe87-4998-92de-02d72137f999)
+## Architecture
 
-## ✨ Key Features / 主要功能
+The application consists of a Python backend and a web-based frontend.
 
-- 📊 **Real-time Monitoring / 实时监控**  
-  Push sensor data to the dashboard in real-time via WebSockets.  
-  通过 WebSockets 将传感器数据实时推送到前端仪表盘。
+### Backend
 
-- 🌡️ **Environment Data / 环境数据**  
-  Temperature, Humidity, Pressure, Altitude.  
-  温度、湿度、气压、海拔高度。
+The backend is a Flask application that uses Flask-SocketIO for real-time communication with the frontend. It has the following key components:
 
-- 🧭 **IMU Data / 姿态数据**  
-  Pitch, Roll, Yaw.  
-  俯仰角、横滚角、航向角。
+*   **Web Server (`run.py`)**: Initializes and runs the Flask application.
+*   **Background Thread (`src/core/background_thread.py`)**: A dedicated thread that continuously reads data from the Sense HAT, processes it, and emits it to the frontend via SocketIO. It also handles joystick events.
+*   **Sense HAT Driver (`src/hardware/sense_driver.py`)**: A wrapper around the official `sense-hat` library to provide a clean interface for accessing sensor data and controlling the LED matrix.
+*   **Web Routes (`src/web/routes.py`)**: Defines the HTTP routes for serving the web pages.
+*   **SocketIO Handlers (`src/web/socket_handler.py`)**: Manages real-time events between the client and server.
+*   **Data Logger (`src/core/logger.py`)**: Logs sensor data to a file when enabled.
 
-- 💾 **Data Logging / 数据记录**  
-  Control data recording via the web interface. Data is saved as CSV in the `logs` directory.  
-  用户可以通过网页控制数据记录，数据以 CSV 格式保存在 `logs` 目录下。
+### Frontend
 
-- 💡 **Multi-mode LED / 多模式 LED**  
-  Switch between various display modes (Monitor, Spirit Level, Rainbow, Fire) using the physical joystick.  
-  通过物理摇杆切换多种显示模式（如监控、水平仪、彩虹、火焰等）。
+The frontend is a single-page web application built with HTML, Bootstrap, and JavaScript.
 
-- 🌐 **Web Interface / Web 界面**  
-  Built with Flask & Socket.IO (Backend) and HTML/Bootstrap 5 (Frontend).  
-  使用 Flask 和 Socket.IO 构建后端，前端采用 HTML, Bootstrap 5 和 JavaScript 实现。
+*   **`web_client/templates/index.html`**: The main and only page of the web application. It uses Socket.IO to receive real-time data from the server and dynamically updates the displayed values.
 
-- 🛠️ **Mock Mode / 模拟模式**  
-  Runs without hardware by generating simulated data for debugging.  
-  在没有 Sense HAT 硬件的环境下也能运行，并生成模拟数据用于调试。
+### Data Flow
 
-## 📂 File Structure / 文件结构
+#### Flowchart
 
-```text
-SenseHATWebDashboard/
-├── .gitignore              # Git ignore configuration / Git 忽略文件配置
-├── README.md               # Project documentation / 项目说明文档
-├── requirements.txt        # Python dependencies / Python 依赖库列表
-├── rules.md                # AI coding rules / AI 编码规则
-├── run.py                  # Main application entry point / 应用主入口
-│
-├── docs/                   # Project documentation / 项目文档
-│   ├── PRD.md
-│   ├── TECH_SPEC.md
-│   └── TODO.md             # Project TODO list / 项目待办事项
-│
-├── logs/                   # Data log files / 数据记录文件
-│
-├── reference/              # Reference code / 参考代码
-│
-├── src/                    # Core source code / 核心源代码
-│   ├── config.py           # Configuration / 配置文件
-│   ├── core/               # Core logic / 核心逻辑
-│   │   ├── background_thread.py # Sensor thread / 传感器线程
-│   │   ├── calculator.py   # Calculations / 计算逻辑
-│   │   └── logger.py       # Data logging / 数据记录
-│   ├── hardware/           # Hardware drivers / 硬件驱动
-│   │   ├── display.py      # LED display / LED 显示
-│   │   └── sense_driver.py # Sense HAT driver / 驱动封装
-│   └── web/                # Web server logic / Web 服务逻辑
-│       ├── __init__.py
-│       ├── routes.py       # Routes / 路由
-│       └── socket_handler.py # SocketIO handlers / SocketIO 处理
-│
-└── web_client/             # Frontend files / 前端文件
-    ├── static/             # Static assets / 静态资源
-    └── templates/          # HTML templates / HTML 模板
-        └── index.html      # Main dashboard / 主仪表盘
+```mermaid
+graph TD
+    A[Sense HAT] -- Sensor Data --> B(Background Thread)
+    A -- Joystick Events --> B
+    B -- Formatted Data --> C{Socket.IO}
+    C -- 'sensor_update' event --> D[Web Browser]
+    D -- 'toggle_recording' event --> C
+    C -- Control Command --> E[Data Logger]
+    B -- Update LED --> A
 ```
 
-## 技术栈
+#### Sequence Diagram
 
-- **硬件**:
-  - Raspberry Pi (3B or newer recommended)
-  - Sense HAT
-- **后端**:
-  - Python
-  - Flask
-  - Flask-SocketIO
-- **前端**:
-  - HTML5
-  - Bootstrap 5
-  - JavaScript
-  - Socket.IO Client
-- **Python 库**:
-  - `sense-hat`
+```mermaid
+sequenceDiagram
+    participant Client as Web Browser
+    participant Server as Flask App
+    participant BackgroundThread as Background Thread
+    participant SenseHAT as Sense HAT
 
-## 如何运行
+    Client->>Server: HTTP GET /
+    Server->>Client: Serve index.html
 
-1. **准备文件**:
-   将项目文件放置在树莓派的某个目录下。
+    Client->>Server: Connect (Socket.IO)
+    Server->>Client: Connection Established
 
-2. **安装依赖**:
-   在项目根目录下，使用 `pip` 安装所有必要的库。
-   ```bash
-   pip install -r requirements.txt
-   ```
+    loop Data Reading Loop
+        BackgroundThread->>SenseHAT: Read Sensors
+        SenseHAT-->>BackgroundThread: Sensor Data
+        BackgroundThread->>SenseHAT: Read Joystick
+        SenseHAT-->>BackgroundThread: Joystick Events
+        BackgroundThread->>Server: Emit 'sensor_update'
+        Server->>Client: Push 'sensor_update'
+    end
 
-3. **运行应用**:
-   确保您在项目根目录下，然后运行 `run.py`。
-   ```bash
-   python3 run.py
-   ```
+    Client->>Server: Emit 'toggle_recording'
+    Server->>BackgroundThread: Toggle Logger
+    BackgroundThread->>BackgroundThread: Start/Stop Logging
+```
 
-4. **访问仪表盘**:
-   在同一局域网下的任何设备上，打开浏览器并访问 `http://<你的树莓派IP地址>:5000` 即可看到实时数据。
-   您可以在树莓派终端中使用 `hostname -I` 命令来查找其 IP 地址。
+## Getting Started
 
-## 注意事项 (Notes)
+### Prerequisites
 
-### 虚拟环境与依赖 (Virtual Environment & Dependencies)
+*   Raspberry Pi with a Sense HAT attached.
+*   Python 3.
+*   `pip` for installing Python packages.
 
-The `sense-hat` library relies on underlying system libraries (RTIMULib, etc.), and direct installation via pip in a clean virtual environment may fail. It's recommended to use the `--system-site-packages` argument when creating the virtual environment to reuse the Raspberry Pi's pre-installed libraries.
+### Installation
 
-**Recommended setup steps / 推荐的设置步骤**:
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd SenseHATWebDashboard
+    ```
+
+2.  **Install the required Python packages:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Running the Application
+
+To start the web server, run the following command:
 
 ```bash
-# 1. Create a virtual environment with access to system packages / 创建带系统包权限的虚拟环境
-python3 -m venv --system-site-packages venv
-
-# 2. 激活环境
-source venv/bin/activate
-
-# 3. 安装其他 Python 依赖 (Flask 等)
-pip install -r requirements.txt
+python run.py
 ```
 
-如果是在非树莓派环境（如 Windows/Mac）开发，程序会自动检测并进入**模拟模式 (Mock Mode)**，生成模拟数据以供测试。
+The application will be accessible at `http://<your-raspberry-pi-ip>:5000` in your web browser.
 
----
+## Usage
 
-**Developer**: Alex
+*   **Web Dashboard**: Open the web interface to see the real-time sensor data.
+*   **Data Logging**: Click the "Start Recording" button to begin logging data. The button will turn to "Stop Recording", which you can click to stop. Log files are saved in the `logs` directory.
+*   **Joystick Control**:
+    *   **Left/Right**: Cycle through the different LED display modes.
+    *   **Up/Down**: Adjust the brightness of the LED matrix.
+    *   **Middle Button**: Turn the LED matrix on or off.
+
+## Project Structure
+
+```
+.
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── run.py              # Main application entry point
+├── docs/               # Documentation files
+├── logs/               # Directory for log files
+├── reference/          # Reference materials
+└── src/                # Source code
+    ├── __init__.py
+    ├── config.py       # Configuration settings
+    ├── core/           # Core application logic
+    │   ├── background_thread.py # Background data reading thread
+    │   ├── calculator.py # Calculation utilities (e.g., altitude)
+    │   └── logger.py     # Data logging functionality
+    ├── hardware/       # Hardware-specific code
+    │   ├── display.py    # LED display logic
+    │   └── sense_driver.py # Sense HAT hardware wrapper
+    └── web/            # Web-related code
+        ├── routes.py     # Flask web routes
+        └── socket_handler.py # Socket.IO event handlers
+└── web_client/         # Frontend files
+    ├── static/         # Static assets (CSS, JS, images)
+    └── templates/      # HTML templates
+        └── index.html
+```

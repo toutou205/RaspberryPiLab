@@ -77,13 +77,32 @@ sequenceDiagram
 ---
 
 ## 📺 屏幕显示说明 (Display Info)
-墨水屏的 UI 设计追求**极简**与**信息密度**的平衡，主要包含四个区域：
+墨水屏的 UI 设计追求**极简**与**信息密度**的平衡，主要包含三个区域：
 
-1.  **左上角 (Temperature)**: 当前实时气温，字体硕大，一目了然。
-2.  **右上角 (Air Quality)**: 实时 AQI (空气质量指数) 及 PM2.5 浓度，直观展示呼吸安全度。
-3.  **中央区 (Weather Icon)**: 基于 QWeather 的动态天气图标（晴、雨、云、雪等），视觉化当前天候。
-4.  **底部栏 (AI Advice)**: 由 Google Gemini 为您实时生成的**一句话建议**。
+![Display Preview](debug_rgb_image.png)
+
+1.  **左侧区域 (Weather Side)**:
+    *   **左上**: 表情符号 (Emoticon)，直观表达空气满意度（如笑脸/哭脸）。
+    *   **左中**: 动态天气图标 (Weather Icon)，视觉化当前天候（晴/雨/云等）。
+    *   **左下**: 实时气温与天气描述 (Temp & Desc)，例如 "多云 25°C"。
+2.  **右侧区域 (Air Side)**:
+    *   **右上**: PM2.5 浓度 (ug/m³)。
+    *   **右中**: 实时 AQI 指数，超大字体显示。
+    *   **右下**: 空气质量等级 (Level)，如 "良" 或 "轻度污染"。
+3.  **底部栏 (AI Advice)**: 由 Google Gemini 为您实时生成的**一句话建议**。
     *   *例如*: "降温了，出门记得带围巾。" 或 "空气优良，去公园散散步吧。"
+
+### 🚨 智能变色逻辑 (Adaptive Color System)
+系统会根据 **AQI (空气质量指数)** 自动切换屏幕配色，提供醒目的视觉警示：
+
+![AQI Levels](debug_black_aqi_levels.png)
+
+*   **🟢 正常 (Normal, AQI ≤ 100)**:
+    *   **白底黑字**。界面保持清爽，适合日常查看。
+*   **🟠 警告 (Warning, 101 ≤ AQI ≤ 200)**:
+    *   **白底红标**。AQI 数值与天气图标自动变红，提示空气轻度污染。
+*   **🔴 严重 (Alert, AQI > 200)**:
+    *   **红底白字**。全屏反色（红色背景），高亮警示严重污染，提醒尽量减少外出。
 
 ---
 
@@ -172,20 +191,20 @@ Uses a classic **Master-Slave** architecture linked via SSH tunnels.
 ```mermaid
 graph LR
     subgraph "Master: PC / Server"
-        Agent[AI Agent (Cursor/Claude)]
-        MCP_Server[MCP Weather Server]
-        Gemini[Google Gemini AI]
+        Agent["AI Agent (Cursor/Claude)"]
+        MCP_Server["MCP Weather Server"]
+        Gemini["Google Gemini AI"]
     end
 
     subgraph "Slave: Raspberry Pi"
-        Renderer[Python Renderer]
-        Driver[E-Ink Driver]
-        Screen[E-Ink Display]
+        Renderer["Python Renderer"]
+        Driver["E-Ink Driver"]
+        Screen["E-Ink Display"]
     end
 
-    Agent <-->|MCP Protocol| MCP_Server
+    Agent <-->|"MCP Protocol"| MCP_Server
     MCP_Server <-->|API| Gemini
-    MCP_Server -->|SSH Pipe (JSON)| Renderer
+    MCP_Server -->|"SSH Pipe (JSON)"| Renderer
     Renderer -->|SPI| Driver
     Driver --> Screen
 ```
@@ -226,11 +245,30 @@ sequenceDiagram
 ## 📺 Display Layout
 The E-ink UI is designed for **minimalism** and **readability**:
 
-1.  **Top-Left (Temperature)**: Large font real-time temperature.
-2.  **Top-Right (Air Quality)**: Real-time AQI and PM2.5 levels.
-3.  **Center (Weather Icon)**: Dynamic QWeather icon (Sun, Rain, Cloud, Snow) visualizing conditions.
-4.  **Bottom (AI Advice)**: **One-sentence advice** generated in real-time by Google Gemini.
+![Display Preview](debug_rgb_image.png)
+
+1.  **Left Panel (Weather Side)**:
+    *   **Top-Left**: Emoticon (Happy/Sad face) indicating satisfaction with air quality.
+    *   **Middle-Left**: Dynamic Weather Icon (Sun/Rain/Cloud).
+    *   **Bottom-Left**: Real-time Temperature & Description (e.g., "Cloudy 25°C").
+2.  **Right Panel (Air Side)**:
+    *   **Top-Right**: PM2.5 Concentration.
+    *   **Middle-Right**: Large AQI Value.
+    *   **Bottom-Right**: Pollution Level Text (e.g., "Good", "Moderate").
+3.  **Bottom Bar (AI Advice)**: **One-sentence advice** generated in real-time by Google Gemini.
     *   *Example*: "It's getting cold, bring a scarf." or "AQI is good, enjoy a walk in the park."
+
+### 🚨 Adaptive Color Logic
+The screen automatically changes color schemes based on **AQI Levels** to provide visual alerts:
+
+![AQI Levels](debug_black_aqi_levels.png)
+
+*   **🟢 Normal (AQI ≤ 100)**:
+    *   **White Background / Black Text**. Clean interface for good air quality.
+*   **🟠 Warning (101 ≤ AQI ≤ 200)**:
+    *   **White Background / Red Highlights**. AQI value and icons turn **RED** to indicate moderate pollution.
+*   **🔴 Alert (AQI > 200)**:
+    *   **Red Background / White Text**. Full screen turns red with white text, strongly warning against hazardous conditions.
 
 ---
 

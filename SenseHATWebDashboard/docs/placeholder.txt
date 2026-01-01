@@ -1,1 +1,1 @@
-This is a placeholder file.
+This directory is intended for documentation-related files, such as images for the README.
